@@ -49,29 +49,37 @@ class CategoryController extends Controller
      */
     public function store(Request $request)
     {
-      if($request->hasFile('file')){
-            Excel::load($request->file('file')->getRealPath(), function ($reader) {
-                if(!empty($reader) && $reader->count()){
-                  foreach ($reader->toArray() as $key => $row) {
+      try {
+        DB::beginTransaction();
+          if($request->hasFile('file')){
+                Excel::load($request->file('file')->getRealPath(), function ($reader) {
+                    if(!empty($reader) && count($reader)){
+                      foreach ($reader->toArray() as $key => $row) {
 
-                        if($row['1'] != NULL) {
-                            $subCat[1] = Category::create([
-                                'id' => $row['no'],
-                                'name' => $row['1']
-                            ]);
-                            // loop to insert child of category
-                            for($i=2; $i<8 ;$i++){
-                                // check if name is not null insert child of category
-                                if($row[$i]!= null){
-                                  $subCat[$i] = $this->getChild($row[$i], $subCat[$i-1]->id);
+                            if($row['1'] != NULL) {
+                                $subCat[1] = Category::create([
+                                    'id' => $row['no'],
+                                    'name' => $row['1']
+                                ]);
+                                // loop to insert child of category
+                                for($i=2; $i<8 ;$i++){
+                                    // check if name is not null insert child of category
+                                    if($row[$i]!= null){
+                                      $subCat[$i] = $this->getChild($row[$i], $subCat[$i-1]->id);
+                                    }
                                 }
                             }
-                        }
-                  }
-                }
-            });
-            return view('import-data');
-        }
+                      }
+                    }
+                });
+                DB::commit();
+                return view('import-data');
+            }
+      } catch (Exception $e) {
+        DB::rollBack();
+        return redirect()->back()
+            ->withErrors(['error' => 'Unable create data.']);
+      }
     }
 
     /**
