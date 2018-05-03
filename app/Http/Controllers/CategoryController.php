@@ -3,7 +3,14 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Input;
+use Illuminate\Support\Facades\Redirect;
+use App\Http\Requests;
 use App\Category;
+use Excel;
+use File;
+use DB;
 
 class CategoryController extends Controller
 {
@@ -31,7 +38,7 @@ class CategoryController extends Controller
      */
     public function create()
     {
-        //
+        return view('import-data');
     }
 
     /**
@@ -42,7 +49,29 @@ class CategoryController extends Controller
      */
     public function store(Request $request)
     {
-        //
+      if($request->hasFile('file')){
+            Excel::load($request->file('file')->getRealPath(), function ($reader) {
+                if(!empty($reader) && $reader->count()){
+                  foreach ($reader->toArray() as $key => $row) {
+
+                        if($row['1'] != NULL) {
+                            $subCat[1] = Category::create([
+                                'id' => $row['no'],
+                                'name' => $row['1']
+                            ]);
+                            // loop to insert child of category
+                            for($i=2; $i<8 ;$i++){
+                                // check if name is not null insert child of category
+                                if($row[$i]!= null){
+                                  $subCat[$i] = $this->getChild($row[$i], $subCat[$i-1]->id);
+                                }
+                            }
+                        }
+                  }
+                }
+            });
+            return view('import-data');
+        }
     }
 
     /**
@@ -102,5 +131,13 @@ class CategoryController extends Controller
           }
       }
       return $branch;
+    }
+
+    function getChild($name, $parentId) {
+        $insertData = Category::create([
+            'name' => $name,
+            'parent_id' => $parentId
+        ]);
+        return $insertData;
     }
 }

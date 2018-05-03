@@ -11,4 +11,6 @@
 |
 */
 
-Route::get('/', 'CategoryController@index');
+Route::get('/', 'CategoryController@index')->name('home');
+Route::get('/import-data', 'CategoryController@create');
+Route::post('/import-data', 'CategoryController@store')->name('import');
